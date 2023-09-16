@@ -47,7 +47,7 @@ user_states = {}
 async def generate_speech(text: str):
     try:
         headers = {'Authorization': f'Bearer {openai.api_key}'}
-        json_data = {'input': text, 'model': 'voice-paimon', 'language': 'en'}  # Changed 'ru' to 'en'
+        json_data = {'input': text, 'model': 'voice-paimon', 'language': 'en'}
         async with aiohttp.ClientSession(headers=headers) as session:
             async with session.post(openai.api_base+'/audio/speech', json=json_data) as resp:
                 if resp.status == 200:
@@ -194,7 +194,7 @@ async def generate_tts_for_text(text: str, chat_id: int):
 
             await bot.send_audio(chat_id, mp3_file)
         else:
-            print("Cannot get audio")
+            bot.send_message(chat_id, "Cannot get audio")
 
 @dp.message_handler(content_types=types.ContentTypes.TEXT)
 async def chat_message(message: types.Message):
