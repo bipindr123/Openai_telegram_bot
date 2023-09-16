@@ -66,6 +66,7 @@
       </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
+    <li><a href="#docker">Docker</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
@@ -108,7 +109,9 @@ Telegram bot for chat completions, image generation, text to speech
 
 <!-- USAGE EXAMPLES -->
 ## Usage
-  Run the file on the server
+  You can either run it manually or through docker
+
+  For manual just run the file on the server
   ```
   python3 bot.py
   ```
@@ -116,10 +119,19 @@ Telegram bot for chat completions, image generation, text to speech
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+## Docker
+  Run the build docker script.
+
+  ```
+  ./build_docker.sh
+  ```
+
 
 <!-- ROADMAP -->
 ## Roadmap
 
+- Add more models
+- Add model selection for image and speech
 - TODO
 
 See the [open issues](https://github.com/bipindr123/Openai_telegram_bot/issues) for a full list of proposed features (and known issues).
@@ -169,7 +181,7 @@ Project Link: [https://github.com/bipindr123/Openai_telegram_bot](https://github
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-* TODO
+* A big thanks to Dakunesuuu
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
