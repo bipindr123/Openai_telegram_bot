@@ -22,8 +22,6 @@
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
 
 
 
@@ -38,7 +36,6 @@
 
   <p align="center">
     Telegram bot for chat completions, image generation, text to speech
-    <br />
     <br />
     <br />
     <a href="https://github.com/bipindr123/Openai_telegram_bot">View Demo</a>
@@ -86,8 +83,6 @@ Telegram bot for chat completions, image generation, text to speech
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
 ### Built With
 
 * ![python-url]
@@ -113,9 +108,12 @@ Telegram bot for chat completions, image generation, text to speech
 
 <!-- USAGE EXAMPLES -->
 ## Usage
+  Run the file on the server
   ```
   python3 bot.py
   ```
+  Yay! your bot shoud now be live
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
