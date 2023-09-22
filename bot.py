@@ -12,7 +12,6 @@ from aiogram.fsm.state import State, StatesGroup
 import aiohttp
 import openai
 import requests
-from fp.fp import FreeProxy
 
 TOKEN = ''
 openai.api_key = ''
@@ -319,7 +318,7 @@ async def generate_tts_for_text(text: str, chat_id: int):
     if text:
         resp = await generate_speech(text, chat_id)
         url = resp["url"]
-        await bot.send_audio(chat_id, audio=url, caption=text[:5])
+        await bot.send_audio(chat_id, audio=url, title=text[:5], performer="evilgrin")
 
 
 @dp.message(F.content_type.in_({"text"}))
