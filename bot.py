@@ -12,6 +12,7 @@ from aiogram.fsm.state import State, StatesGroup
 import aiohttp
 import openai
 import requests
+from fp.fp import FreeProxy
 
 TOKEN = ''
 openai.api_key = ''
@@ -319,7 +320,15 @@ async def generate_tts_for_text(text: str, chat_id: int):
         resp = await generate_speech(text, chat_id)
         url = resp["url"]
         print(url)
-        response = await requests.get(url)
+
+        proxy = FreeProxy(https=True, country_id=['GB']).get()
+        proxies = {
+            "https": proxy,
+        }
+
+        with requests.Session() as session:
+            session.proxies = proxies
+            response = session.get(url=url)
 
         # Check if the request was successful (status code 200)
         if response.status_code == 200:
