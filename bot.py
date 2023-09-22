@@ -319,27 +319,7 @@ async def generate_tts_for_text(text: str, chat_id: int):
     if text:
         resp = await generate_speech(text, chat_id)
         url = resp["url"]
-        print(url)
-
-        proxy = FreeProxy(https=True, country_id=['GB']).get()
-        proxies = {
-            "https": proxy,
-        }
-
-        with requests.Session() as session:
-            session.proxies = proxies
-            response = session.get(url=url)
-
-        # Check if the request was successful (status code 200)
-        if response.status_code == 200:
-            # You can now work with the content as a file-like object
-            mp3_file = response.content
-
-            # audio_file = await response.content.read(response.content_length)
-
-            await bot.send_audio(chat_id, mp3_file)
-        else:
-            bot.send_message(chat_id, "Cannot get audio")
+        await bot.send_audio(chat_id, audio=url, caption=text[:5])
 
 
 @dp.message(F.content_type.in_({"text"}))
