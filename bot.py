@@ -13,8 +13,8 @@ import aiohttp
 import openai
 import requests
 
-TOKEN = ""
-openai.api_key = ""
+TOKEN = ''
+openai.api_key = ''
 openai.api_base = ""
 
 # add more as you like
@@ -272,11 +272,12 @@ async def process_text(message: types.Message, state: FSMContext):
 
 
 @dp.message(lambda message: message.text.lower() == "finish dialogue")
-async def cancel(message: types.Message):
+async def cancel(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     user_data = user_states.get(user_id)
     if user_data and user_data.get("button_sent"):
         user_states[user_id] = {"model": None, "button_sent": False, "conversation": []}
+        await state.clear()
         await message.answer(
             'Dialogue finished. You can start a new dialogue by clicking "Start Dialogue".',
             reply_markup=get_start_dialog_keyboard(),
@@ -287,14 +288,6 @@ async def cancel(message: types.Message):
 
 @dp.message(Tts.waiting_for_tt)
 async def process_tts_text(message: types.Message, state: FSMContext):
-    if message.text.lower() == "finish dialogue":
-        await state.clear()
-        user_states[user_id] = {"model": None, "button_sent": False, "conversation": []}
-        await message.reply(
-            'Dialogue finished. You can start a new dialogue by clicking "Start Dialogue".',
-            reply_markup=get_start_dialog_keyboard(),
-        )
-        return
     try:
         text = message.text
 
@@ -326,7 +319,7 @@ async def generate_tts_for_text(text: str, chat_id: int):
         resp = await generate_speech(text, chat_id)
         url = resp["url"]
         print(url)
-        response = requests.get(url)
+        response = await requests.get(url)
 
         # Check if the request was successful (status code 200)
         if response.status_code == 200:
