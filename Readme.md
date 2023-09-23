@@ -87,6 +87,7 @@ Telegram bot for chat completions, image generation, text to speech
 ### Built With
 
 * ![python-url]
+* aiogram 3.1.0
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
