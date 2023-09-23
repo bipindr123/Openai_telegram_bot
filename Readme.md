@@ -131,9 +131,10 @@ Telegram bot for chat completions, image generation, text to speech
 <!-- ROADMAP -->
 ## Roadmap
 
-- Add more models
-- Add model selection for image and speech
-- TODO
+- ~~Add more models~~
+- ~~Add model selection for image and speech~~
+- ~~Migrate to aiogram 3.1.0~~
+- You tell me
 
 See the [open issues](https://github.com/bipindr123/Openai_telegram_bot/issues) for a full list of proposed features (and known issues).
 
