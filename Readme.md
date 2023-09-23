@@ -18,12 +18,6 @@
 *** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
 *** https://www.markdownguide.org/basic-syntax/#reference-style-links
 -->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-
-
 
 <!-- PROJECT LOGO -->
 <br />
@@ -38,7 +32,7 @@
     Telegram bot for chat completions, image generation, text to speech
     <br />
     <br />
-    <a href="https://github.com/bipindr123/Openai_telegram_bot">View Demo</a>
+    <a href="https://github.com/bipindr123/Openai_telegram_bot">For Demo contact me on telegram @evilgrin </a>
     ·
     <a href="https://github.com/bipindr123/Openai_telegram_bot/issues">Report Bug</a>
     ·
