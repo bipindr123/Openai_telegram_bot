@@ -11,56 +11,56 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 import aiohttp
 import openai
-import requests
+from openai import OpenAI
+import json
+import os
+from dotenv import load_dotenv
 
-TOKEN = ''
-openai.api_key = ''
-openai.api_base = ""
+load_dotenv()
+
+openai_key=os.getenv('OPENAI_KEY')
+openai_base=os.getenv('OPENAI_BASE')
+TOKEN = os.getenv('TOKEN')
+
+client = OpenAI(api_key=openai_key, base_url=openai_base)
+import requests
 
 # add more as you like
 available_models = [
-    "you-chat",
-    "oasst-llama-2-70b",
-    "llama-2-70b",
-    "inflection-1",
-    "gpt-4-0613",
     "gpt-4",
-    "gpt-3.5-turbo-16k-0613",
     "gpt-3.5-turbo-16k",
-    "gpt-3.5-turbo-0613",
+    "gpt-3.5-turbo-1106",
     "gpt-3.5-turbo",
-    "flan-t5-xxl",
-    "decilm-6b-instruct",
-    "claude-2-100k",
-    "chatglm-2-6b",
-]
+    "gpt-4-1106-preview",
+    "llama-2-70b-chat",
+    "gemini-pro",
+    ]
 
 image_models = [
-    "wuerstchen-diffusion",
-    "toonyou",
-    "theallys-mix-2",
-    "stable-diffusion-1.4",
-    "shonins-beautiful",
-    "sdxl",
-    "sdv-1.4",
-    "run-diffusion",
-    "rev-animated",
-    "realistic-vision-5",
-    "realistic-vision-2",
-    "realistic-vision",
-    "portraitplus",
-    "orange-mix",
-    "meinamix-9",
-    "meinamix-11",
-    "lyriel-1.6",
-    "dreamshaper-8",
-    "dreamshaper-6",
-    "dall-e",
-    "anything-diffusion-5",
-    "anime-diffusion-xl",
-    "absolute-reality-1.8",
+    'stable-diffusion-1.5' ,
+    'stable-diffusion-2.1' ,
+    'material-diffusion' ,
+    'dreamshaper-6' ,
+    'kandinsky-2.1' ,
+    'wuerstchen-diffusion' ,
+    'kandinsky-2.2' ,
+    'realistic-vision' ,
+    'timeless' ,
+    'meinamix' ,
+    'lyriel-1.6' ,
+    'mechamix-10' ,
+    'meinamix-11' ,
+    'portraitplus' ,
+    'dall-e-3' ,
+    'dreamshaper-8' ,
+    'deepfloyd-if' ,
+    'pastelMixAnime' ,
+    'openjourney' ,
+    'sdxl'
 ]
 voice_models = ["voice-paimon", "google-speech", "voice-adam", "voice-freya"]
+
+vision_models = ["gemini-pro-vision", "llava-13b"]
 
 
 logging.basicConfig(level=logging.INFO)
@@ -72,28 +72,36 @@ bot = Bot(TOKEN, parse_mode=ParseMode.HTML)
 class ImagePrompt(StatesGroup):
     waiting_for_text = State()
 
-
 class Tts(StatesGroup):
-    waiting_for_tt = State()
+    waiting_for_tts = State()
 
+class Viz(StatesGroup):
+    waiting_for_vision = State()
 
 user_states = {}
+
+async def logme(username, model, text):
+    msg = str(username) + " " + str(model) +" "+ text
+    await bot.send_message(chat_id='@evilbotlogs', text=msg)
 
 async def generate_speech(text: str, chat_id):
     try:
         user_id = chat_id
         user_data = user_states.get(user_id, {})
         model = user_data.get("model")
-        headers = {"Authorization": f"Bearer {openai.api_key}"}
-        json_data = {"input": text, "model": model, "language": "en"}
-
+        headers = {"Authorization": f"Bearer {openai_key}", 'Content-Type': 'application/json'}
+        # json_data = {"input": text, "model": model, "language": "en"}
+        s_data = {
+                "prompt": text,
+                "model": model,
+                }
         async with aiohttp.ClientSession(headers=headers) as session:
             async with session.post(
-                openai.api_base + "/audio/speech", json=json_data
+                openai_base , json=s_data
             ) as resp:
                 if resp.status == 200:
-                    response = await resp.json()
-                    return response
+                    response = await resp.read()
+                    return json.loads(response.decode('utf-8'))
                 else:
                     error_message = await resp.text()
                     raise Exception(
@@ -101,6 +109,46 @@ async def generate_speech(text: str, chat_id):
                     )
     except Exception as e:
         raise Exception(f"Error in generating speech: {str(e)}")
+    
+
+async def generate_vision(text: str, chat_id, im_url):
+    try:
+        user_id = chat_id
+        user_data = user_states.get(user_id, {})
+        model = user_data.get("model")
+        headers = {"Authorization": f"Bearer {openai_key}", 'Content-Type': 'application/json'}
+        # json_data = {"input": text, "model": model, "language": "en"}
+        
+        if model == "gemini-pro-vision":
+            in_messages =[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": text},
+                        {
+                            "type": "image_url",
+                            "image_url": im_url
+                        },
+                    ],
+                }
+            ]
+        else:
+            in_messages=[
+                    {"role": "system", "content": im_url},
+                    {"role": "user", "content": text},
+                ]
+        
+        resp = client.chat.completions.create(
+            model=model,
+            messages=in_messages,
+            stream=False,
+        )
+
+        ai_response = resp.choices[0].message.content
+        return ai_response
+
+    except Exception as e:
+        raise Exception(f"Error : {str(e)}")
 
 
 async def start_dialog(user_id):
@@ -117,13 +165,18 @@ async def start_dialog(user_id):
             text="Create Image", callback_data="image_nested_keyboard"
         )
         tts_button = types.InlineKeyboardButton(
-            text="Text-to-Speech", callback_data="audio_nested_keyboard"
+            text="Text-to-Speech (BROKEN)", callback_data="audio_nested_keyboard"
+        )
+        vision_button = types.InlineKeyboardButton(
+            text="Vision", callback_data="vision_nested_keyboard"
         )
 
         model_buttons = []
         model_buttons.append([chat_button])
         model_buttons.append([image_button])
         model_buttons.append([tts_button])
+        model_buttons.append([vision_button])
+
         # Create keyboard
         model_keyboard = types.InlineKeyboardMarkup(inline_keyboard=model_buttons)
         await bot.send_message(
@@ -145,7 +198,7 @@ async def handle_start(message: types.Message, state: FSMContext):
 
 @dp.callback_query(
     lambda query: query.data
-    in ("text_nested_keyboard", "image_nested_keyboard", "audio_nested_keyboard")
+    in ("text_nested_keyboard", "image_nested_keyboard", "audio_nested_keyboard", "vision_nested_keyboard")
 )
 async def nested_keyboard(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
@@ -159,10 +212,16 @@ async def nested_keyboard(callback_query: types.CallbackQuery):
             [types.InlineKeyboardButton(text=model, callback_data=model)]
             for model in image_models
         ]
-    else:
+
+    elif callback_query.data == "audio_nested_keyboard":
         model_buttons = [
             [types.InlineKeyboardButton(text=model, callback_data=model)]
             for model in voice_models
+        ]
+    else:
+        model_buttons = [
+            [types.InlineKeyboardButton(text=model, callback_data=model)]
+            for model in vision_models
         ]
 
     model_keyboard = types.InlineKeyboardMarkup(inline_keyboard=model_buttons)
@@ -175,6 +234,7 @@ async def nested_keyboard(callback_query: types.CallbackQuery):
     lambda query: query.data in available_models
     or query.data in image_models
     or query.data in voice_models
+    or query.data in vision_models
 )
 async def select_model_or_image_prompt(
     callback_query: types.CallbackQuery, state: FSMContext
@@ -188,6 +248,27 @@ async def select_model_or_image_prompt(
     if callback_query.data in image_models:
         await callback_query.message.answer("Enter text for the prompt:")
         await state.set_state(ImagePrompt.waiting_for_text)
+        selected_model = callback_query.data
+        user_states[user_id]["model"] = selected_model
+        await callback_query.message.edit_text(
+            f"Selected Model: {selected_model}.\nSend a message to start the dialogue."
+        )
+
+        cancel_button = KeyboardButton(text="Finish Dialogue")
+        cancel_markup = ReplyKeyboardMarkup(
+            keyboard=[[cancel_button]], resize_keyboard=True
+        )
+        await callback_query.message.answer(
+            'You can finish the dialogue by pressing the "Finish Dialogue" button.',
+            reply_markup=cancel_markup,
+        )
+        user_states[user_id]["button_sent"] = True
+    
+    elif callback_query.data in vision_models:
+        await callback_query.message.answer(
+            "Enter your promt in this format: \"question ,, https://image.jpg\"  "
+        )
+        await state.set_state(Viz.waiting_for_vision)
         selected_model = callback_query.data
         user_states[user_id]["model"] = selected_model
         await callback_query.message.edit_text(
@@ -246,6 +327,7 @@ async def process_text(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     user_data = user_states.get(user_id, {})
     model = user_data.get("model")
+    await logme(message.from_user.username,model,message.text)
     if message.text.lower() == "finish dialogue":
         await state.clear()
         user_states[user_id] = {"model": None, "button_sent": False, "conversation": []}
@@ -256,18 +338,17 @@ async def process_text(message: types.Message, state: FSMContext):
         return
     try:
         prompt_text = message.text
-        response = openai.Image.create(
-            model=model, prompt=prompt_text, n=4, size="1024x1024"
-        )
-        for image in response["data"]:
-            await bot.send_photo(message.chat.id, photo=image["url"])
+        response = client.images.generate(model=model, prompt=prompt_text, n=2)
+        for img_url in response.data:
+            await bot.send_photo(message.chat.id, photo=img_url.url)
 
-    except openai.error.APIError as e:
+    except openai.APIError as e:
         error_message = "An error occurred while creating the image: "
         if hasattr(e, "response") and "detail" in e.response:
             error_message += e.response["detail"]
         else:
             error_message += str(e)
+    finally:
         await message.answer(error_message)
 
 
@@ -286,10 +367,15 @@ async def cancel(message: types.Message, state: FSMContext):
         await message.reply("There is no active dialogue at the moment.")
 
 
-@dp.message(Tts.waiting_for_tt)
+@dp.message(Tts.waiting_for_tts)
 async def process_tts_text(message: types.Message, state: FSMContext):
     try:
         text = message.text
+        user_id = message.chat.id
+        user_data = user_states.get(user_id, {})
+        model = user_data.get("model")
+        
+        await logme(message.from_user.username , model, message.text)
 
         if text.lower() == "finish dialogue":
             await state.clear()
@@ -313,28 +399,73 @@ async def process_tts_text(message: types.Message, state: FSMContext):
         print("An exception occurred:", error)
         await message.reply("Error in text-to-speech synthesis.")
 
+@dp.message(Viz.waiting_for_vision)
+async def process_vision(message: types.Message, state: FSMContext):
+    try:
+        text = message.text
+        user_id = message.chat.id
+        user_data = user_states.get(user_id, {})
+        model = user_data.get("model")
+        
+        await logme(message.from_user.username , model, message.text)
+
+        if text.lower() == "finish dialogue":
+            await state.clear()
+            user_id = message.from_user.id
+            user_states[user_id]["model"] = None
+            user_states[user_id]["button_sent"] = False
+            await message.reply(
+                'Dialogue finished. You can start a new dialogue by clicking "Start Dialogue".',
+                reply_markup=get_start_dialog_keyboard(),
+            )
+            return
+
+        text = text.strip()
+
+        text, im_url = text.split(" ,, ")
+
+        if not text:
+            text = "Please enter valid text."
+
+        resp = await generate_vision(text, message.chat.id, im_url)
+        await message.reply(resp)
+
+    except Exception as error:
+        print("An exception occurred:", error)
+        await message.reply("Error in text-to-speech synthesis.")
+
 
 async def generate_tts_for_text(text: str, chat_id: int):
     if text:
         resp = await generate_speech(text, chat_id)
         url = resp["url"]
         await bot.send_audio(chat_id, audio=url, title=text[:5], performer="evilgrin")
+            
 
 
 @dp.message(F.content_type.in_({"text"}))
 async def chat_message(message: types.Message):
     user_id = message.from_user.id
     user_data = user_states.get(user_id, {})
-    model = user_data.get("model")
-    msg = message.from_user.username + " " + str(model) + " " + message.text
+    model = user_data.get('model')
+    await logme(message.from_user.username , model, message.text)
     if model:
         conversation = user_data["conversation"]
         conversation.append({"role": "user", "content": message.text})
-        response = openai.ChatCompletion.create(model=model, messages=conversation)
-        conversation.append(response.choices[0].message)
+        try:
+            response = client.chat.completions.create(model=model, messages=conversation)
+            conversation.append(response.choices[0].message)
+            ai_response = response.choices[0].message.content
+            await message.reply(ai_response)
 
-        ai_response = response.choices[0].message["content"]
-        await message.reply(ai_response)
+        except Exception as e:
+            error_message = "An error occurred text: "
+            if hasattr(e, "response") and "detail" in e.response:
+                error_message += e.response["detail"]
+            else:
+                error_message += str(e)
+            await message.answer(error_message)
+
         if not user_data.get("button_sent", False):
             cancel_button = KeyboardButton(text="Finish Dialogue")
             cancel_markup = ReplyKeyboardMarkup(

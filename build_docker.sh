@@ -10,4 +10,4 @@ docker rmi $(docker images -q $IMAGE_NAME)
 docker build --build-arg LIB_DIR=/usr/lib -t $IMAGE_NAME . 
 
 # Start container
-docker run --rm --net=host --name $CONTAINER_NAME -d $IMAGE_NAME
+docker run --net=host --name $CONTAINER_NAME -d $IMAGE_NAME
