@@ -39,25 +39,21 @@ available_models = [
     ]
 
 image_models = [
-    'stable-diffusion-1.5' ,
-    'stable-diffusion-2.1' ,
+    'stable-diffusion-v1.5' ,
+    'stable-diffusion-v2.1' ,
     'material-diffusion' ,
-    'dreamshaper-6' ,
-    'kandinsky-2.1' ,
-    'wuerstchen-diffusion' ,
-    'kandinsky-2.2' ,
-    'realistic-vision' ,
-    'timeless' ,
+    'kandinsky-v2.2' ,
+    'kandinsky-v2' ,
+    'openjourney-xl' ,
+    'realisticVision' ,
+    'openjourney-v4' ,
+    'dreamshaper' ,
+    'absoluteReality' ,
     'meinamix' ,
-    'lyriel-1.6' ,
-    'mechamix-10' ,
-    'meinamix-11' ,
-    'portraitplus' ,
+    'deliberate' ,
     'dall-e-3' ,
-    'dreamshaper-8' ,
     'deepfloyd-if' ,
     'pastelMixAnime' ,
-    'openjourney' ,
     'sdxl'
 ]
 
@@ -144,20 +140,21 @@ async def generate_vision(text: str, chat_id, im_url):
                  conversation.append({"role": "system", "content": im_url})
                  conversation.append({"role": "user", "content": text})
                 
-        print(conversation)
         resp = client.chat.completions.create(
             model=model,
             messages=conversation,
             stream=False,
         )
+        if resp:
+            ai_response = resp.choices[0].message.content
+            if model == "llava-13b":
+                conversation.append({"role": "system", "content": ai_response})
+            else:
+                conversation.append({'role': 'user', 'content': [{'type': 'text', 'text': ai_response}]})
 
-        ai_response = resp.choices[0].message.content
-        if model == "llava-13b":
-            conversation.append({"role": "system", "content": ai_response})
+            return ai_response
         else:
-            conversation.append({'role': 'user', 'content': [{'type': 'text', 'text': ai_response}]})
-
-        return ai_response
+            return "server error"
 
     except Exception as e:
         raise Exception(f"Error : {str(e)}")
@@ -169,6 +166,7 @@ async def start_dialog(user_id):
             user_id, "Please complete the ongoing conversation first."
         )
     else:
+        user_states[user_id] = {"model": None, "button_sent": False, "conversation": []}
         chat_button = types.InlineKeyboardButton(
             text="Chat", callback_data="text_nested_keyboard"
         )
@@ -351,11 +349,10 @@ async def process_text(message: types.Message, state: FSMContext):
 
     except openai.APIError as e:
         error_message = "An error occurred while creating the image: "
-        if hasattr(e, "response") and "detail" in e.response:
-            error_message += e.response["detail"]
+        if hasattr(e, "message"):
+            error_message += e.message
         else:
             error_message += str(e)
-    finally:
         await message.answer(error_message)
 
 @dp.message(lambda message: message.text.lower() == "finish dialogue" if message.text else False)
@@ -445,7 +442,7 @@ async def process_vision(message: types.Message, state: FSMContext):
 
     except Exception as error:
         print("An exception occurred:", error)
-        await message.reply("Error in text-to-speech synthesis.")
+        await message.reply("Error in vision")
 
 async def generate_tts_for_text(text: str, chat_id: int):
     if text:
