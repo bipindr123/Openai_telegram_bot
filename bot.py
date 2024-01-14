@@ -15,12 +15,14 @@ from openai import OpenAI
 import json
 import os
 from dotenv import load_dotenv
+import imgbbpy
 
 load_dotenv()
 
 openai_key=os.getenv('OPENAI_KEY')
 openai_base=os.getenv('OPENAI_BASE')
 TOKEN = os.getenv('TOKEN')
+IMGBB_API_KEY = os.getenv('IMGBB_API_KEY')
 
 client = OpenAI(api_key=openai_key, base_url=openai_base)
 import requests
@@ -58,16 +60,15 @@ image_models = [
     'openjourney' ,
     'sdxl'
 ]
+
 voice_models = ["voice-paimon", "google-speech", "voice-adam", "voice-freya"]
 
 vision_models = ["gemini-pro-vision", "llava-13b"]
-
 
 logging.basicConfig(level=logging.INFO)
 
 dp = Dispatcher()
 bot = Bot(TOKEN, parse_mode=ParseMode.HTML)
-
 
 class ImagePrompt(StatesGroup):
     waiting_for_text = State()
@@ -109,7 +110,6 @@ async def generate_speech(text: str, chat_id):
                     )
     except Exception as e:
         raise Exception(f"Error in generating speech: {str(e)}")
-    
 
 async def generate_vision(text: str, chat_id, im_url):
     try:
@@ -119,37 +119,48 @@ async def generate_vision(text: str, chat_id, im_url):
         headers = {"Authorization": f"Bearer {openai_key}", 'Content-Type': 'application/json'}
         # json_data = {"input": text, "model": model, "language": "en"}
         
-        if model == "gemini-pro-vision":
-            in_messages =[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": text},
-                        {
-                            "type": "image_url",
-                            "image_url": im_url
-                        },
-                    ],
-                }
-            ]
+        conversation = user_data["conversation"]
+
+        if not im_url:
+            if model == "llava-13b":
+                conversation.append({"role": "user", "content": text})
+            else:
+                conversation.append({'role': 'user', 'content': [{'type': 'text', 'text': text}]})
         else:
-            in_messages=[
-                    {"role": "system", "content": im_url},
-                    {"role": "user", "content": text},
-                ]
-        
+            if model == "gemini-pro-vision":
+                conversation.append(
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": text},
+                            {
+                                "type": "image_url",
+                                "image_url": im_url
+                            },
+                        ],
+                    }
+                )
+            else:
+                 conversation.append({"role": "system", "content": im_url})
+                 conversation.append({"role": "user", "content": text})
+                
+        print(conversation)
         resp = client.chat.completions.create(
             model=model,
-            messages=in_messages,
+            messages=conversation,
             stream=False,
         )
 
         ai_response = resp.choices[0].message.content
+        if model == "llava-13b":
+            conversation.append({"role": "system", "content": ai_response})
+        else:
+            conversation.append({'role': 'user', 'content': [{'type': 'text', 'text': ai_response}]})
+
         return ai_response
 
     except Exception as e:
         raise Exception(f"Error : {str(e)}")
-
 
 async def start_dialog(user_id):
     user_data = user_states[user_id]
@@ -183,7 +194,6 @@ async def start_dialog(user_id):
             user_id, f"Choose an option:", reply_markup=model_keyboard
         )
 
-
 @dp.message(CommandStart())
 async def handle_start(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
@@ -194,7 +204,6 @@ async def handle_start(message: types.Message, state: FSMContext):
         reply_markup=get_start_dialog_keyboard(),
     )
     await start_dialog(user_id)
-
 
 @dp.callback_query(
     lambda query: query.data
@@ -228,7 +237,6 @@ async def nested_keyboard(callback_query: types.CallbackQuery):
     await bot.send_message(
         user_id, f"Please select a model", reply_markup=model_keyboard
     )
-
 
 @dp.callback_query(
     lambda query: query.data in available_models
@@ -266,7 +274,7 @@ async def select_model_or_image_prompt(
     
     elif callback_query.data in vision_models:
         await callback_query.message.answer(
-            "Enter your promt in this format: \"question ,, https://image.jpg\"  "
+            "Upload a photo with your question as the caption "
         )
         await state.set_state(Viz.waiting_for_vision)
         selected_model = callback_query.data
@@ -321,7 +329,6 @@ async def select_model_or_image_prompt(
         )
         user_states[user_id]["button_sent"] = True
 
-
 @dp.message(ImagePrompt.waiting_for_text)
 async def process_text(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
@@ -351,8 +358,7 @@ async def process_text(message: types.Message, state: FSMContext):
     finally:
         await message.answer(error_message)
 
-
-@dp.message(lambda message: message.text.lower() == "finish dialogue")
+@dp.message(lambda message: message.text.lower() == "finish dialogue" if message.text else False)
 async def cancel(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     user_data = user_states.get(user_id)
@@ -365,7 +371,6 @@ async def cancel(message: types.Message, state: FSMContext):
         )
     else:
         await message.reply("There is no active dialogue at the moment.")
-
 
 @dp.message(Tts.waiting_for_tts)
 async def process_tts_text(message: types.Message, state: FSMContext):
@@ -402,46 +407,51 @@ async def process_tts_text(message: types.Message, state: FSMContext):
 @dp.message(Viz.waiting_for_vision)
 async def process_vision(message: types.Message, state: FSMContext):
     try:
-        text = message.text
+        if message.text:
+            text = message.text
+        else:
+            if message.caption:
+                text = message.caption
+            else:
+                message.reply("Enter valid caption")
+                return
         user_id = message.chat.id
         user_data = user_states.get(user_id, {})
         model = user_data.get("model")
         
-        await logme(message.from_user.username , model, message.text)
-
         if text.lower() == "finish dialogue":
             await state.clear()
             user_id = message.from_user.id
-            user_states[user_id]["model"] = None
-            user_states[user_id]["button_sent"] = False
+            user_states[user_id] = {"model": None, "button_sent": False, "conversation": []}
             await message.reply(
                 'Dialogue finished. You can start a new dialogue by clicking "Start Dialogue".',
                 reply_markup=get_start_dialog_keyboard(),
             )
             return
+        
+        if message.caption:
+            res = await bot.download(message.photo[-1],  destination="/tmp/teleimg.jpg")
 
-        text = text.strip()
+            client = imgbbpy.AsyncClient(IMGBB_API_KEY)
+            img = await client.upload(file='/tmp/teleimg.jpg', expiration=500)
+            await client.close()
+            img_url = img.url
+            await logme(message.from_user.username , model, img_url)
+        else:
+            img_url = None
 
-        text, im_url = text.split(" ,, ")
-
-        if not text:
-            text = "Please enter valid text."
-
-        resp = await generate_vision(text, message.chat.id, im_url)
+        resp = await generate_vision(text, message.chat.id, img_url)
         await message.reply(resp)
 
     except Exception as error:
         print("An exception occurred:", error)
         await message.reply("Error in text-to-speech synthesis.")
 
-
 async def generate_tts_for_text(text: str, chat_id: int):
     if text:
         resp = await generate_speech(text, chat_id)
         url = resp["url"]
         await bot.send_audio(chat_id, audio=url, title=text[:5], performer="evilgrin")
-            
-
 
 @dp.message(F.content_type.in_({"text"}))
 async def chat_message(message: types.Message):
@@ -479,16 +489,13 @@ async def chat_message(message: types.Message):
     else:
         await start_dialog(user_id)
 
-
 def get_start_dialog_keyboard():
     start_button = KeyboardButton(text="Start Dialogue")
     start_markup = ReplyKeyboardMarkup(keyboard=[[start_button]], resize_keyboard=True)
     return start_markup
 
-
 async def main() -> None:
     await dp.start_polling(bot, skip_updates=True)
-
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
