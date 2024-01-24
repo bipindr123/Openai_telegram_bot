@@ -23,6 +23,7 @@ openai_key=os.getenv('OPENAI_KEY')
 openai_base=os.getenv('OPENAI_BASE')
 TOKEN = os.getenv('TOKEN')
 IMGBB_API_KEY = os.getenv('IMGBB_API_KEY')
+userlog = os.getenv('userlog')
 
 client = OpenAI(api_key=openai_key, base_url=openai_base)
 import requests
@@ -79,7 +80,7 @@ user_states = {}
 
 async def logme(username, model, text):
     msg = str(username) + " " + str(model) +" "+ text
-    await bot.send_message(chat_id='@evilbotlogs', text=msg)
+    await bot.send_message(chat_id=userlog, text=msg)
 
 async def generate_speech(text: str, chat_id):
     try:

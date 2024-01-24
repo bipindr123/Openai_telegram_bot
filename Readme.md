@@ -87,10 +87,7 @@ Telegram bot for chat completions, image generation, text to speech
 ### Screenshots
 
 
-<img src="./screenshots/IMG-20240123-WA0001.jpg"  width="20%" height="10%">
-<img src="./screenshots/IMG-20240123-WA0002.jpg"  width="20%" height="10%">
-<img src="./screenshots/IMG-20240123-WA0003.jpg"  width="20%" height="10%">
-<img src="./screenshots/IMG-20240123-WA0004.jpg"  width="20%" height="10%">
+<img src="./screenshots/IMG-20240123-WA0001.jpg"  width="20%" height="10%"> <img src="./screenshots/IMG-20240123-WA0002.jpg"  width="20%" height="10%"> <img src="./screenshots/IMG-20240123-WA0003.jpg"  width="20%" height="10%"> <img src="./screenshots/IMG-20240123-WA0004.jpg"  width="20%" height="10%">
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
