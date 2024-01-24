@@ -41,6 +41,7 @@
 </div>
 
 
+![status-url]
 
 <!-- TABLE OF CONTENTS -->
 <details>
@@ -82,6 +83,14 @@ Telegram bot for chat completions, image generation, text to speech
 
 * ![python-url]
 * aiogram 3.1.0
+
+### Screenshots
+
+
+<img src="./screenshots/IMG-20240123-WA0001.jpg"  width="20%" height="10%">
+<img src="./screenshots/IMG-20240123-WA0002.jpg"  width="20%" height="10%">
+<img src="./screenshots/IMG-20240123-WA0003.jpg"  width="20%" height="10%">
+<img src="./screenshots/IMG-20240123-WA0004.jpg"  width="20%" height="10%">
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -186,6 +195,7 @@ Project Link: [https://github.com/bipindr123/Openai_telegram_bot](https://github
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
+[status-url]: https://img.shields.io/badge/Status-Active-green
 [contributors-shield]: https://img.shields.io/github/contributors/github_username/repo_name.svg?style=for-the-badge
 [contributors-url]: https://github.com/bipindr123/Openai_telegram_bot/graphs/contributors
 [forks-shield]: https://img.shields.io/github/forks/github_username/repo_name.svg?style=for-the-badge
