@@ -159,7 +159,7 @@ async def generate_vision(text: str, chat_id, im_url):
     except Exception as e:
         raise Exception(f"Error : {str(e)}")
 
-async def start_dialog(user_id):
+async def start_dialog(user_id, message):
     user_data = user_states[user_id]
     if user_data["model"]:
         await bot.send_message(
@@ -188,8 +188,8 @@ async def start_dialog(user_id):
 
         # Create keyboard
         model_keyboard = types.InlineKeyboardMarkup(inline_keyboard=model_buttons)
-        await bot.send_message(
-            user_id, f"Choose an option:", reply_markup=model_keyboard
+        await message.reply(
+            f"Choose an option:", reply_markup=model_keyboard
         )
 
 @dp.message(CommandStart())
@@ -201,7 +201,7 @@ async def handle_start(message: types.Message, state: FSMContext):
         f"Hello, {user.first_name}! I'm EvilgrinGPT created by evilgrin.",
         reply_markup=get_start_dialog_keyboard(),
     )
-    await start_dialog(user_id)
+    await start_dialog(user_id, message)
 
 @dp.callback_query(
     lambda query: query.data
@@ -484,7 +484,7 @@ async def chat_message(message: types.Message):
             )
             user_states[user_id]["button_sent"] = True
     else:
-        await start_dialog(user_id)
+        await start_dialog(user_id, message)
 
 def get_start_dialog_keyboard():
     start_button = KeyboardButton(text="Start Dialogue")
