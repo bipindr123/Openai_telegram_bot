@@ -29,7 +29,7 @@
 <h3 align="center">OpenAI API telegram bot</h3>
 
   <p align="center">
-    Telegram bot for chat completions, image generation, text to speech
+    Telegram bot for multimodal OPENAI chat completions, image generation, text to speech using asyc multi user communication. 
     <br />
     <br />
     <a href="https://github.com/bipindr123/Openai_telegram_bot">For Demo contact me on telegram @evilgrin </a>
@@ -100,7 +100,7 @@ Telegram bot for chat completions, image generation, text to speech
 
 ### Installation
 
-1. Edit bot.py and put in your telegram token, openapi key and openapi base url
+1. Add a .env file to the project root directory and fill in your telegram token, openapi key and openapi base url
 
 <!-- USAGE EXAMPLES -->
 ## Usage
@@ -128,6 +128,7 @@ Telegram bot for chat completions, image generation, text to speech
 - ~~Add more models~~
 - ~~Add model selection for image and speech~~
 - ~~Migrate to aiogram 3.1.0~~
+- ~~Added Vision for Gemini Pro~~
 - You tell me
 
 See the [open issues](https://github.com/bipindr123/Openai_telegram_bot/issues) for a full list of proposed features (and known issues).
