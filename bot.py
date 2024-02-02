@@ -1,12 +1,12 @@
 import asyncio
 import logging
+import re
 import sys
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.utils.markdown import hbold
-
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 import aiohttp
@@ -23,7 +23,7 @@ openai_key=os.getenv('OPENAI_KEY')
 openai_base=os.getenv('OPENAI_BASE')
 TOKEN = os.getenv('TOKEN')
 IMGBB_API_KEY = os.getenv('IMGBB_API_KEY')
-userlog = os.getenv('userlog')
+userlog = os.getenv('USERLOG')
 
 client = OpenAI(api_key=openai_key, base_url=openai_base)
 import requests
@@ -54,6 +54,7 @@ image_models = [
     'deliberate' ,
     'dall-e-3' ,
     'deepfloyd-if' ,
+    'majicmixsombre', 
     'pastelMixAnime' ,
     'sdxl'
 ]
@@ -79,8 +80,9 @@ class Viz(StatesGroup):
 user_states = {}
 
 async def logme(username, model, text):
-    msg = str(username) + " " + str(model) +" "+ text
-    await bot.send_message(chat_id=userlog, text=msg)
+    if userlog:
+        msg = str(username) + " " + str(model) +" "+ text
+        await bot.send_message(chat_id=userlog, text=msg)
 
 async def generate_speech(text: str, chat_id):
     try:
@@ -149,7 +151,7 @@ async def generate_vision(text: str, chat_id, im_url):
         if resp:
             ai_response = resp.choices[0].message.content
             if model == "llava-13b":
-                conversation.append({"role": "system", "content": ai_response})
+                conversation.append({"role": "user", "content": ai_response})
             else:
                 conversation.append({'role': 'user', 'content': [{'type': 'text', 'text': ai_response}]})
 
@@ -434,11 +436,24 @@ async def process_vision(message: types.Message, state: FSMContext):
             img = await client.upload(file='/tmp/teleimg.jpg', expiration=500)
             await client.close()
             img_url = img.url
-            await logme(message.from_user.username , model, img_url)
+            await logme(message.from_user.username , model, text+" "+img_url)
         else:
             img_url = None
 
+        tmp_file_name = ""
+        if re.search("file:\w*", text):
+            tmp_file_name = re.search("file:\w*", text).group(0)
+            text = text.replace(tmp_file_name, "")
+            tmp_file_name = tmp_file_name.split(":")
+            tmp_file_name = ".".join(tmp_file_name)
+        
         resp = await generate_vision(text, message.chat.id, img_url)
+        if tmp_file_name:
+            with open("/tmp/"+tmp_file_name, "w") as docu:
+                docu.write(resp)
+            tmpf = FSInputFile("/tmp/"+tmp_file_name)
+            await bot.send_document(message.chat.id, tmpf)
+            os.remove("/tmp/"+tmp_file_name)
         await message.reply(resp)
 
     except Exception as error:
