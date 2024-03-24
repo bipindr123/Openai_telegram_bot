@@ -1,5 +1,5 @@
 FROM python:3.10.13-slim-bookworm
-RUN apt-get update -y && apt-get install -y build-essential
+RUN apt-get update -y
 
 #use --build-arg LIB_DIR=/usr/lib for arm64 cpus
 

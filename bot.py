@@ -37,14 +37,9 @@ available_models = [
     "gpt-4-1106-preview",
     "llama-2-70b-chat",
     "gemini-pro",
-    ]
+]
 
 image_models = [
-    'stable-diffusion-v1.5' ,
-    'stable-diffusion-v2.1' ,
-    'material-diffusion' ,
-    'kandinsky-v2.2' ,
-    'kandinsky-v2' ,
     'openjourney-xl' ,
     'realisticVision' ,
     'openjourney-v4' ,
@@ -81,7 +76,10 @@ user_states = {}
 
 async def logme(username, model, text):
     if userlog:
-        msg = str(username) + " " + str(model) +" "+ text
+        if username:
+            msg = str(username) + " " + str(model) +" "+ text
+        else:
+            msg = str() + " " + str(model) +" "+ text
         await bot.send_message(chat_id=userlog, text=msg)
 
 async def generate_speech(text: str, chat_id):
@@ -335,7 +333,8 @@ async def process_text(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     user_data = user_states.get(user_id, {})
     model = user_data.get("model")
-    await logme(message.from_user.username,model,message.text)
+    user_info = " ".join([message.from_user.full_name, message.from_user.username, str(message.from_user.id)])
+    await logme(user_info , model, message.text)
     if message.text.lower() == "finish dialogue":
         await state.clear()
         user_states[user_id] = {"model": None, "button_sent": False, "conversation": []}
@@ -379,8 +378,8 @@ async def process_tts_text(message: types.Message, state: FSMContext):
         user_id = message.chat.id
         user_data = user_states.get(user_id, {})
         model = user_data.get("model")
-        
-        await logme(message.from_user.username , model, message.text)
+        user_info = " ".join([message.from_user.full_name, message.from_user.username, str(message.from_user.id)])
+        await logme(user_info , model, message.text)
 
         if text.lower() == "finish dialogue":
             await state.clear()
@@ -436,7 +435,9 @@ async def process_vision(message: types.Message, state: FSMContext):
             img = await client.upload(file='/tmp/teleimg.jpg', expiration=500)
             await client.close()
             img_url = img.url
-            await logme(message.from_user.username , model, text+" "+img_url)
+        
+            user_info = " ".join([message.from_user.full_name, message.from_user.username, str(message.from_user.id)])
+            await logme(user_info , model, message.text)
         else:
             img_url = None
 
@@ -471,7 +472,8 @@ async def chat_message(message: types.Message):
     user_id = message.from_user.id
     user_data = user_states.get(user_id, {})
     model = user_data.get('model')
-    await logme(message.from_user.username , model, message.text)
+    user_info = " ".join([message.from_user.full_name, message.from_user.username, str(message.from_user.id)])
+    await logme(user_info , model, message.text)
     if model:
         conversation = user_data["conversation"]
         conversation.append({"role": "user", "content": message.text})
