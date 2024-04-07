@@ -184,8 +184,6 @@ Project Link: [https://github.com/bipindr123/Openai_telegram_bot](https://github
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-* A big thanks to Dakunesuuu
-
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
