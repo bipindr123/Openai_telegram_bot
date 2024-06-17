@@ -30,13 +30,11 @@ import requests
 
 # add more as you like
 available_models = [
-    "gpt-4",
-    "gpt-3.5-turbo-16k",
-    "gpt-3.5-turbo-1106",
-    "gpt-3.5-turbo",
-    "gpt-4-1106-preview",
-    "llama-2-70b-chat",
-    "gemini-pro",
+"llama-3-70b",
+"gpt-3.5-turbo",
+"gpt-3.5-turbo-1106",
+"gpt-4",
+"gpt-4-turbo",
 ]
 
 image_models = [
@@ -53,8 +51,14 @@ image_models = [
     'pastelMixAnime' ,
     'sdxl'
 ]
+voice_d  = {
+    "adam": "pNInz6obpgDQGcFmaJgB",
+    "serena": "pMsXgVXv3BLzUgSXRplE",
+    "brian": "nPczCjzI2devNBz1zQrb",
+    "jessie": "t0jbNlBVZ17f02VDIeMI"
+}
 
-voice_models = ["voice-paimon", "google-speech", "voice-adam", "voice-freya"]
+voice_models = ["adam", "serena", "brian", "jessie"]
 
 vision_models = ["gemini-pro-vision", "llava-13b"]
 
@@ -72,6 +76,9 @@ class Tts(StatesGroup):
 class Viz(StatesGroup):
     waiting_for_vision = State()
 
+class Intro(StatesGroup):
+    waiting_for_reason = State()
+
 user_states = {}
 
 async def logme(username, model, text):
@@ -87,17 +94,17 @@ async def generate_speech(text: str, chat_id):
         user_id = chat_id
         user_data = user_states.get(user_id, {})
         model = user_data.get("model")
-        headers = {"Authorization": f"Bearer {openai_key}", 'Content-Type': 'application/json'}
-        # json_data = {"input": text, "model": model, "language": "en"}
+        headers = {"Authorization": f"Bearer {openai_key}"}
         s_data = {
-                "prompt": text,
-                "model": model,
+                "text": text,
+                "voice_id": voice_d[model]
                 }
         async with aiohttp.ClientSession(headers=headers) as session:
             async with session.post(
-                openai_base , json=s_data
+                openai_base +"/audio/tts" , json=s_data
             ) as resp:
                 if resp.status == 200:
+                    print(resp)
                     response = await resp.read()
                     return json.loads(response.decode('utf-8'))
                 else:
@@ -160,8 +167,13 @@ async def generate_vision(text: str, chat_id, im_url):
     except Exception as e:
         raise Exception(f"Error : {str(e)}")
 
-async def start_dialog(user_id, message):
+async def start_dialog(user_id, message, state: FSMContext):
+    if user_id not in user_states:
+        await message.reply("How did you find this bot? answer to continue")
+        await state.set_state(Intro.waiting_for_reason)
+        return
     user_data = user_states[user_id]
+
     if user_data["model"]:
         await bot.send_message(
             user_id, "Please complete the ongoing conversation first."
@@ -193,16 +205,33 @@ async def start_dialog(user_id, message):
             f"Choose an option:", reply_markup=model_keyboard
         )
 
-@dp.message(CommandStart())
-async def handle_start(message: types.Message, state: FSMContext):
+@dp.message(Intro.waiting_for_reason)
+async def handle_reason(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     user = message.from_user
+    user_info = " ".join([message.from_user.full_name, message.from_user.username, str(message.from_user.id)])
+    await logme(user_info , "Intro", message.text)
+    await state.clear()
+
     user_states[user_id] = {"model": None, "button_sent": False, "conversation": []}
     await message.answer(
         f"Hello, {user.first_name}! I'm EvilgrinGPT created by evilgrin.",
         reply_markup=get_start_dialog_keyboard(),
     )
-    await start_dialog(user_id, message)
+    await start_dialog(user_id, message, state)
+
+
+@dp.message(CommandStart())
+async def handle_start(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    user = message.from_user
+    if user_id not in user_states:
+        await message.reply("How did you find this bot? answer to continue")
+        await state.set_state(Intro.waiting_for_reason)
+    else:
+        user_states[user_id] = {"model": None, "button_sent": False, "conversation": []}
+        await start_dialog()
+
 
 @dp.callback_query(
     lambda query: query.data
@@ -296,7 +325,7 @@ async def select_model_or_image_prompt(
         await callback_query.message.answer(
             "Limit is 50 characters. Enter the text for speech synthesis:"
         )
-        await state.set_state(Tts.waiting_for_tt)
+        await state.set_state(Tts.waiting_for_tts)
         selected_model = callback_query.data
         user_states[user_id]["model"] = selected_model
         await callback_query.message.edit_text(
@@ -468,7 +497,7 @@ async def generate_tts_for_text(text: str, chat_id: int):
         await bot.send_audio(chat_id, audio=url, title=text[:5], performer="evilgrin")
 
 @dp.message(F.content_type.in_({"text"}))
-async def chat_message(message: types.Message):
+async def chat_message(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     user_data = user_states.get(user_id, {})
     model = user_data.get('model')
@@ -502,7 +531,7 @@ async def chat_message(message: types.Message):
             )
             user_states[user_id]["button_sent"] = True
     else:
-        await start_dialog(user_id, message)
+        await start_dialog(user_id, message, state)
 
 def get_start_dialog_keyboard():
     start_button = KeyboardButton(text="Start Dialogue")
